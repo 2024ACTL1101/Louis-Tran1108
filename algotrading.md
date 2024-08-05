@@ -72,6 +72,30 @@ accumulated_shares <- 0
 
 for (i in 1:nrow(amd_df)) {
 # Fill your code here
+for (i in 1:nrow(amd_df)) {
+current_price <- amd_df$close[i]
+   
+   if (previous_price == 0) {
+     # Initial buy
+     amd_df$trade_type[i] <- 'buy'
+     amd_df$costs_proceeds[i] <- -current_price * share_size
+     accumulated_shares <- accumulated_shares + share_size
+   } else if (current_price < previous_price) {
+     # Buy condition
+     amd_df$trade_type[i] <- 'buy'
+     amd_df$costs_proceeds[i] <- -current_price * share_size
+     accumulated_shares <- accumulated_shares + share_size
+   }
+   
+   # Last day condition to sell
+   if (i == nrow(amd_df)) {
+     amd_df$trade_type[i] <- 'sell'
+     amd_df$costs_proceeds[i] <- current_price * accumulated_shares
+     accumulated_shares <- 0
+   }
+   
+   amd_df$accumulated_shares[i] <- accumulated_shares
+   previous_price <- current_price
 }
 ```
 
@@ -80,6 +104,15 @@ for (i in 1:nrow(amd_df)) {
 - Define a trading period you wanted in the past five years 
 ```r
 # Fill your code here
+# Define the start and end dates for the trading period
+ start_date <- as.Date("2019-01-01")
+ end_date <- as.Date("2020-01-01")
+ 
+ # Subset the dataframe for the specified trading period
+ amd_df <- subset(amd_df, date >= start_date & date <= end_date)
+ 
+ # Display the first few rows of the subsetted dataframe to verify
+ head(amd_df)
 ```
 
 
@@ -92,6 +125,19 @@ After running your algorithm, check if the trades were executed as expected. Cal
 
 ```r
 # Fill your code here
+ # Calculate Total Profit/Loss
+ total_profit_loss <- sum(amd_df$costs_proceeds, na.rm = TRUE)
+ 
+ # Calculate Total Invested Capital
+ total_invested_capital <- -sum(amd_df$costs_proceeds[amd_df$trade_type == 'buy'], na.rm = TRUE)
+ 
+ # Calculate ROI
+ roi <- (total_profit_loss / total_invested_capital) * 100
+ 
+ # Display the results
+ cat("Total Profit/Loss: ", total_profit_loss, "\n")
+ cat("Total Invested Capital: ", total_invested_capital, "\n")
+ cat("ROI: ", roi, "%\n")
 ```
 
 ### Step 5: Profit-Taking Strategy or Stop-Loss Mechanisum (Choose 1)
@@ -101,6 +147,39 @@ After running your algorithm, check if the trades were executed as expected. Cal
 
 ```r
 # Fill your code here
+## Option chosen: Profit-Taking Strategy
+ # Define the start and end dates for the trading period
+ start_date <- as.Date("2019-01-01")
+ end_date <- as.Date("2020-01-01")
+ 
+ # Subset the dataframe for the specified trading period
+ amd_df <- subset(amd_df, date >= start_date & date <= end_date)
+ 
+ # Calculate the average purchase price
+ average_purchase_price <- -sum(amd_df$costs_proceeds[amd_df$trade_type == 'buy'], na.rm = TRUE) /
+   sum(amd_df$accumulated_shares[amd_df$trade_type == 'buy'], na.rm = TRUE)
+ 
+ # Define the percentage increase for profit-taking
+ percentage_increase <- 20 / 100
+ 
+ # Initialize a column to store the action
+ amd_df$action <- NA
+ 
+ # Implement the profit-taking strategy
+ for (i in 1:nrow(amd_df)) {
+   if (!is.na(amd_df$close[i])) {
+     if (amd_df$close[i] >= (average_purchase_price * (1 + percentage_increase))) {
+       amd_df$action[i] <- "sell_half"
+       # Adjust accumulated shares and costs_proceeds
+       half_shares <- amd_df$accumulated_shares[i] / 2
+       amd_df$costs_proceeds[i] <- amd_df$close[i] * half_shares
+       amd_df$accumulated_shares[i] <- amd_df$accumulated_shares[i] - half_shares
+     }
+   }
+ }
+ 
+ # Display the dataframe to verify the profit-taking strategy
+ print(amd_df)
 ```
 
 
@@ -111,7 +190,25 @@ After running your algorithm, check if the trades were executed as expected. Cal
 
 ```r
 # Fill your code here and Disucss
+# Calculate Total Profit/Loss
+ total_profit_loss <- sum(amd_df$costs_proceeds, na.rm = TRUE)
+ 
+ # Calculate Invested Capital
+ invested_capital <- -sum(amd_df$costs_proceeds[amd_df$trade_type == 'buy'], na.rm = TRUE)
+ 
+ # Calculate ROI
+ roi <- (total_profit_loss / invested_capital) * 100
+ 
+ cat("Total Profit/Loss: ", total_profit_loss, "\n")
+ cat("Invested Capital: ", invested_capital, "\n")
+ cat("ROI: ", roi, "%\n")
+ 
+ # Print the final dataframe for reference
+ print(head(amd_df, 20))
 ```
+Discussion:
+During the trading period from January 1, 2019, to January 1, 2020, the ROI remained at -100%, indicating no improvement. This suggests that the stock price did not increase by 20% from the average purchase price at any point during the trading period, leading to no sell transactions being triggered. The maximum stock price during the period was below the profit-taking threshold, resulting in continuous buys and no opportunity to realize profits through sales. Consequently, the total profit/loss also did not improve. A relevant market event that could explain these results is the impact of the COVID-19 pandemic, which started affecting global markets significantly in early 2020. The pandemic created significant market volatility and uncertainty, likely preventing AMD's stock from achieving the necessary price increase for the profit-taking strategy to be effective. As a result, the strategy did not yield the desired outcomes during this tumultuous period, and both P/L and ROI remained unchanged.
+
 
 Sample Discussion: On Wednesday, December 6, 2023, AMD CEO Lisa Su discussed a new graphics processor designed for AI servers, with Microsoft and Meta as committed users. The rise in AMD shares on the following Thursday suggests that investors believe in the chipmaker's upward potential and market expectations; My first strategy earned X dollars more than second strategy on this day, therefore providing a better ROI.
 
