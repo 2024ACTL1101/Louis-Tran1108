@@ -82,6 +82,11 @@ $$
 
 ```r
 #fill the code
+df <- df %>%
+  mutate(
+    AMD_return = (AMD - lag(AMD)) / lag(AMD),
+    GSPC_return = (GSPC - lag(GSPC)) / lag(GSPC)
+  )
 ```
 
 - **Calculate Risk-Free Rate**: Calculate the daily risk-free rate by conversion of annual risk-free Rate. This conversion accounts for the compounding effect over the days of the year and is calculated using the formula:
@@ -92,6 +97,9 @@ $$
 
 ```r
 #fill the code
+annual_rf_rate <- 5 / 100  # 5% annual rate
+df <- df %>%
+  mutate(daily_rf_rate = (1 + annual_rf_rate)^(1/360) - 1)
 ```
 
 
@@ -99,6 +107,11 @@ $$
 
 ```r
 #fill the code
+df <- df %>%
+  mutate(
+    AMD_excess_return = AMD_return - daily_rf_rate,
+    GSPC_excess_return = GSPC_return - daily_rf_rate
+  )
 ```
 
 
@@ -106,6 +119,10 @@ $$
 
 ```r
 #fill the code
+capm_model <- lm(AMD_excess_return ~ GSPC_excess_return, data = df)
+summary(capm_model)
+beta <- coef(capm_model)[2]
+beta
 ```
 
 
@@ -114,13 +131,27 @@ $$
 What is your \(\beta\)? Is AMD more volatile or less volatile than the market?
 
 **Answer:**
+The beta ($\beta$) of AMD was calculated to be approximately 1.57, indicating that AMD is more volatile than the market; for every 1% change in the S&P 500's excess return, AMD's excess return is expected to change by about 1.57%.
 
+The $R^2$ value of 0.4017 indicates that approximately 40.17% of the variance in AMD's excess returns is explained by the S&P 500's excess returns. The adjusted $R^2$ value of 0.4013 shows minimal reduction when adjusting for the number of predictors.
+
+The p-value for the GSPC_excess_return coefficient is less than 2e-16, indicating the statistical significance of the relationship between AMD's and the S&P 500's excess returns.
+
+In summary, AMD's higher beta reflects its greater volatility relative to the market. The model explains a moderate portion of this variance, providing insights into AMD's systematic risk.
 
 #### Plotting the CAPM Line
 Plot the scatter plot of AMD vs. S&P 500 excess returns and add the CAPM regression line.
 
 ```r
 #fill the code
+ggplot(df, aes(x = GSPC_excess_return, y = AMD_excess_return)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    title = "CAPM Regression Line",
+    x = "S&P 500 Excess Return",
+    y = "AMD Excess Return"
+  )
 ```
 
 ### Step 3: Predictions Interval
@@ -132,4 +163,30 @@ Suppose the current risk-free rate is 5.0%, and the annual expected return for t
 
 ```r
 #fill the code
+# Calculate daily standard deviation of excess returns
+daily_sd <- sd(df$AMD_excess_return, na.rm = TRUE)
+# Annual standard deviation
+annual_sd <- daily_sd * sqrt(252)
+
+# Expected market return
+expected_return_sp500 <- 0.133
+# Risk-free rate
+risk_free_rate <- 0.05
+# Expected return of AMD using CAPM formula
+expected_return_amd <- risk_free_rate + beta * (expected_return_sp500 - risk_free_rate)
+
+# Calculate 90% prediction interval
+lower_bound <- expected_return_amd - 1.645 * annual_sd
+upper_bound <- expected_return_amd + 1.645 * annual_sd
+
+cat("Expected Return of AMD:", expected_return_amd, "\n")
+cat("Annual Standard Deviation:", annual_sd, "\n")
+cat("90% Prediction Interval for AMD's Annual Expected Return: [", lower_bound, ", ", upper_bound, "]\n")
 ```
+### Results Interpretation
+
+The expected return of AMD, calculated using the CAPM formula, is approximately 18.03%. The annual standard deviation of AMD's excess returns is 52.66%, indicating high volatility. The 90% prediction interval for AMD's annual expected return ranges from -68.60% to 104.66%.
+
+This wide interval reflects significant uncertainty in AMD's future returns, consistent with its beta ($\beta$) of 1.57, which indicates higher volatility relative to the market. A higher beta suggests greater systematic risk, meaning AMD's returns are more sensitive and reactive to market movements.
+
+Investors should be aware of this increased risk, as the potential for higher returns can also mean the possibility of significant losses. The model explains a moderate portion of AMD's return variance, indicating that while market performance is a significant factor, other variables still play a role in this statistic. This highlights the importance of a diversified investment approach to mitigate risk.
